@@ -29,7 +29,7 @@ type APIClient struct {
 
 type APIResponse struct {
 	bSuccess bool
-	objData  interface{}
+	objData  any
 	strError string
 }
 
@@ -70,7 +70,7 @@ func (a *APIClient) rateLimit() {
 	a.tLastCall = time.Now()
 }
 
-func (a *APIClient) MakeAPICall(strURL string, dictHeader map[string]string, strMethod string, dictPayload interface{}, lstFiles map[string]string, strUser string, strPWD string) APIResponse {
+func (a *APIClient) MakeAPICall(strURL string, dictHeader map[string]string, strMethod string, dictPayload any, lstFiles map[string]string, strUser string, strPWD string) APIResponse {
 	a.rateLimit()
 
 	a.objLogger.LogEntry(fmt.Sprintf("Doing a %s to URL: %s", strMethod, strURL), 1, false)
@@ -177,7 +177,7 @@ func (a *APIClient) MakeAPICall(strURL string, dictHeader map[string]string, str
 		return APIResponse{bSuccess: false, strError: "response was HTML or empty"}
 	}
 
-	var objResult interface{}
+	var objResult any
 	if err := json.Unmarshal(objRespBody, &objResult); err != nil {
 		return APIResponse{bSuccess: false, strError: fmt.Sprintf("failed to parse JSON: %s", err.Error())}
 	}

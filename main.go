@@ -158,7 +158,7 @@ func main() {
 	}
 
 	// Extract access token
-	dictAuthResp, ok := objResp.objData.(map[string]interface{})
+	dictAuthResp, ok := objResp.objData.(map[string]any)
 	if !ok {
 		objLogger.LogEntry("Unexpected auth response format", 0, true)
 	}
@@ -174,13 +174,13 @@ func main() {
 	if !objResp.bSuccess {
 		objLogger.LogEntry(fmt.Sprintf("Failed to fetch accounts: %s", objResp.strError), 0, true)
 	}
-	lstAccounts, ok := objResp.objData.([]interface{})
+	lstAccounts, ok := objResp.objData.([]any)
 	if !ok {
 		objLogger.LogEntry("Unexpected accounts response format", 0, true)
 	}
 	dictAcctRef := make(map[string]string)
 	for _, objAcct := range lstAccounts {
-		dictAcct := objAcct.(map[string]interface{})
+		dictAcct := objAcct.(map[string]any)
 		strAcctID := fmt.Sprintf("%v", dictAcct["id"])
 		strAcctCode := fmt.Sprintf("%v", dictAcct["code"])
 		dictAcctRef[strAcctCode] = strAcctID
@@ -213,7 +213,7 @@ func main() {
 	if !objResp.bSuccess {
 		objLogger.LogEntry(fmt.Sprintf("Failed to fetch payment types: %s", objResp.strError), 0, true)
 	}
-	lstPayTypes, ok := objResp.objData.([]interface{})
+	lstPayTypes, ok := objResp.objData.([]any)
 	if !ok {
 		objLogger.LogEntry("Unexpected payment types response format", 0, true)
 	}
@@ -222,7 +222,7 @@ func main() {
 	fmt.Println("Please select a payment type from the list below")
 	fmt.Println("ID: Name (Description)")
 	for iIndex, objPT := range lstPayTypes {
-		dictPT := objPT.(map[string]interface{})
+		dictPT := objPT.(map[string]any)
 		fmt.Printf("%d: %v (%v)\n", iIndex, dictPT["title"], dictPT["description"])
 	}
 	strPayType := getInput("Please enter the payment type ID: ")
@@ -234,13 +234,13 @@ func main() {
 	if iPayType < 0 || iPayType >= len(lstPayTypes) {
 		objLogger.LogEntry(fmt.Sprintf("Payment type ID must be between 0 and %d", len(lstPayTypes)-1), 0, true)
 	}
-	strPayTypeID := fmt.Sprintf("%v", lstPayTypes[iPayType].(map[string]interface{})["id"])
+	strPayTypeID := fmt.Sprintf("%v", lstPayTypes[iPayType].(map[string]any)["id"])
 	objLogger.Log(fmt.Sprintf("Payment type ID %d: %s was selected", iPayType, strPayTypeID))
 
 	// Process expense entries
 	strURL := objCfg.BaseURL + "expenses"
 	strEntryID := ""
-	var dictBody map[string]interface{}
+	var dictBody map[string]any
 	var lstFiles map[string]string
 	var lstBadEntryIDs []string
 
@@ -270,7 +270,7 @@ func main() {
 			strTaxPct = "0.0"
 		}
 
-		dictLine := map[string]interface{}{
+		dictLine := map[string]any{
 			"quantity":              1,
 			"description":           strDescription,
 			"unitPriceIncludingVat": parseFloat(dictRow["Expense Total Amount (in Reimbursement Currency)"]),
@@ -280,7 +280,7 @@ func main() {
 
 		if strEntryID == dictRow["Entry Number"] {
 			// Additional line on same entry
-			dictBody["lines"] = append(dictBody["lines"].([]interface{}), dictLine)
+			dictBody["lines"] = append(dictBody["lines"].([]any), dictLine)
 		} else {
 			// Submit previous entry if there was one
 			if strEntryID != "" {
@@ -304,18 +304,18 @@ func main() {
 			}
 
 			// Build body
-			dictBody = map[string]interface{}{
+			dictBody = map[string]any{
 				"status":      "PAID",
-				"creditor":    map[string]interface{}{},
+				"creditor":    map[string]any{},
 				"date":        dictRow["Expense Item Date"],
 				"deductible":  objCfg.Deductible,
 				"paidDate":    dictRow["Expense Item Date"],
-				"paymentType": map[string]interface{}{"id": strPayTypeID},
+				"paymentType": map[string]any{"id": strPayTypeID},
 				"reference":   dictRow["Report Number"],
-				"lines":       []interface{}{dictLine},
+				"lines":       []any{dictLine},
 			}
 
-			dictCreditor := dictBody["creditor"].(map[string]interface{})
+			dictCreditor := dictBody["creditor"].(map[string]any)
 			if dictRow["Mileage Type"] == "NonMileage" {
 				dictCreditor["Name"] = dictRow["Merchant Name"]
 				dictCreditor["ssn"] = dictRow["Expense.CF.Kennitala"]
