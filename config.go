@@ -1,9 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"os"
 	"strings"
+
+	"gopkg.in/ini.v1"
 )
 
 type Config struct {
@@ -30,55 +31,41 @@ func defaultConfig() Config {
 	}
 }
 
-func parseINI(path string, cfg *Config) error {
-	objFile, err := os.Open(path)
+func parseINI(strPath string, objCfg *Config) error {
+	objFile, err := ini.Load(strPath)
 	if err != nil {
 		return err
 	}
-	defer objFile.Close()
 
-	objScanner := bufio.NewScanner(objFile)
-	for objScanner.Scan() {
-		strLine := strings.TrimSpace(objScanner.Text())
-
-		// Strip comments
-		if i := strings.Index(strLine, "#"); i >= 0 {
-			strLine = strings.TrimSpace(strLine[:i])
-		}
-		if !strings.Contains(strLine, "=") {
-			continue
-		}
-
-		lstParts := strings.SplitN(strLine, "=", 2)
-		strKey := strings.TrimSpace(lstParts[0])
-		strVal := strings.TrimSpace(lstParts[1])
-
-		if strVal == "" {
-			continue
-		}
-
-		switch strKey {
-		case "API_URL":
-			cfg.BaseURL = strVal
-		case "CLIENT_ID":
-			cfg.ClientID = strVal
-		case "CLIENT_SECRET":
-			cfg.ClientSecret = strVal
-		case "ATTACHMENTS":
-			cfg.Attachments = strVal
-		case "IN_FILE":
-			cfg.InFile = strVal
-		case "PROXY":
-			cfg.Proxy = strVal
-		case "CSV_DELIM":
-			cfg.CSVDelim = rune(strVal[0])
-		case "DEDUCTABLE":
-			cfg.Deductible = strings.ToLower(strVal) == "true"
-		case "EMPLOYEE_ID":
-			cfg.EmployeeID = strVal
-		}
+	objSec := objFile.Section("")
+	if v := objSec.Key("API_URL").String(); v != "" {
+		objCfg.BaseURL = v
 	}
-	return objScanner.Err()
+	if v := objSec.Key("CLIENT_ID").String(); v != "" {
+		objCfg.ClientID = v
+	}
+	if v := objSec.Key("CLIENT_SECRET").String(); v != "" {
+		objCfg.ClientSecret = v
+	}
+	if v := objSec.Key("ATTACHMENTS").String(); v != "" {
+		objCfg.Attachments = v
+	}
+	if v := objSec.Key("IN_FILE").String(); v != "" {
+		objCfg.InFile = v
+	}
+	if v := objSec.Key("PROXY").String(); v != "" {
+		objCfg.Proxy = v
+	}
+	if v := objSec.Key("CSV_DELIM").String(); v != "" {
+		objCfg.CSVDelim = rune(v[0])
+	}
+	if v := objSec.Key("DEDUCTABLE").String(); v != "" {
+		objCfg.Deductible = strings.ToLower(v) == "true"
+	}
+	if v := objSec.Key("EMPLOYEE_ID").String(); v != "" {
+		objCfg.EmployeeID = v
+	}
+	return nil
 }
 
 func applyEnvVars(cfg *Config) {

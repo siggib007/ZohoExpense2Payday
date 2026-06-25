@@ -109,9 +109,22 @@ func main() {
 		objLogger.LogEntry("Employee ID must be either name, kt or kennitala", 0, true)
 	}
 
-	// Validate attachments path
-	if _, err := os.Stat(objCfg.Attachments); os.IsNotExist(err) {
-		objLogger.LogEntry(fmt.Sprintf("Attachments path %s does not exist", objCfg.Attachments), 0, true)
+	// Handle zip extraction or validate attachments path
+	if isZipFile(objCfg.Attachments) {
+		if _, err := os.Stat(objCfg.Attachments); os.IsNotExist(err) {
+			objLogger.LogEntry(fmt.Sprintf("Zip file %s does not exist", objCfg.Attachments), 0, true)
+		}
+		strTempDir, err := extractZip(objCfg.Attachments, objLogger)
+		if err != nil {
+			objLogger.LogEntry(fmt.Sprintf("Failed to extract zip: %s", err), 0, true)
+		}
+		defer os.RemoveAll(strTempDir)
+		objCfg.Attachments = strTempDir
+		objLogger.Log(fmt.Sprintf("Using extracted attachments from %s", strTempDir))
+	} else {
+		if _, err := os.Stat(objCfg.Attachments); os.IsNotExist(err) {
+			objLogger.LogEntry(fmt.Sprintf("Attachments path %s does not exist", objCfg.Attachments), 0, true)
+		}
 	}
 	objCfg.Attachments = strings.ReplaceAll(objCfg.Attachments, "\\", "/")
 
