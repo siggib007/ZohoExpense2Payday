@@ -1,0 +1,5 @@
+06-25-2026 17:06:21 : Starting up script ZohoExpense2Payday.exe on IDEAPADS5
+06-25-2026 17:06:21 : Verbosity set to 1
+06-25-2026 17:06:21 : Config file set to: C:/Users/siggi/OneDrive/Scripts/Go/ZohoExpense2Payday/ZohoExpense2Payday.ini
+06-25-2026 17:06:21 : Could not read config file C:/Users/siggi/OneDrive/Scripts/Go/ZohoExpense2Payday/ZohoExpense2Payday.ini: open C:/Users/siggi/OneDrive/Scripts/Go/ZohoExpense2Payday/ZohoExpense2Payday.ini: The system cannot find the file specified.
+06-25-2026 17:06:21 : No URL or API auth config, exiting

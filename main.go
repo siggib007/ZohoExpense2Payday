@@ -47,6 +47,7 @@ func main() {
 	strEmployee := flag.String("e", "", "Employee identification: name, kt or kennitala")
 	strProxy := flag.String("x", "", "Proxy for API calls")
 	strLogFile := flag.String("l", strDefLogFile, "Path to log file")
+	bNoGUI := flag.Bool("nogui", false, "Run in CLI mode without GUI")
 	flag.Parse()
 
 	fmt.Printf("This is a script to transfer expense items from Zoho Expense to Payday.\n")
@@ -69,6 +70,13 @@ func main() {
 	// Load config — three tier: INI -> env vars -> CLI flags
 	objCfg := defaultConfig()
 	objCfg.Verbose = *iVerbose
+
+	// Launch GUI mode unless -nogui specified
+	if !*bNoGUI {
+		objUI := NewUI(&objCfg, objLogger, strBaseDir)
+		objUI.Run()
+		return
+	}
 
 	if err := parseINI(*strConfFile, &objCfg); err != nil {
 		objLogger.Log(fmt.Sprintf("Could not read config file %s: %s", *strConfFile, err))

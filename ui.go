@@ -100,6 +100,7 @@ func (u *UI) buildRunTab() fyne.CanvasObject {
 	u.objKennitala = widget.NewEntry()
 	u.objKennitala.SetPlaceHolder("Kennitala")
 	u.objKennitala.Hidden = true
+	u.objEmployeeID.SetSelected("name")
 
 	// Deductible checkbox
 	u.objDeductible = widget.NewCheck("VAT Deductible", nil)
