@@ -427,3 +427,7 @@ func matchPattern(strName string, strPattern string) bool {
 	strPrefix := strPattern[:strings.Index(strPattern, "*")]
 	return strings.HasPrefix(strName, strPrefix)
 }
+
+func runCore(_ *Config, objLogger *Logger) {
+	objLogger.Log("runCore not yet implemented")
+}

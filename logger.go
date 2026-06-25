@@ -6,11 +6,6 @@ import (
 	"time"
 )
 
-type Logger struct {
-	iVerbose  int
-	objLogOut *os.File
-}
-
 func NewLogger(strLogFile string, iVerbose int) (*Logger, error) {
 	objLogOut, err := os.OpenFile(strLogFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
@@ -27,6 +22,9 @@ func (l *Logger) LogEntry(strMsg string, iMsgLevel int, bAbort bool) {
 	if l.iVerbose > iMsgLevel {
 		fmt.Fprintf(l.objLogOut, "%s : %s\n", strTimeStamp, strMsg)
 		fmt.Println(strMsg)
+		if l.fnUILog != nil {
+			l.fnUILog(strMsg)
+		}
 	} else if bAbort {
 		fmt.Fprintf(l.objLogOut, "%s : %s\n", strTimeStamp, strMsg)
 	}
@@ -43,4 +41,10 @@ func (l *Logger) Log(strMsg string) {
 func (l *Logger) Close() {
 	l.objLogOut.Close()
 	fmt.Println("objLogOut closed")
+}
+
+type Logger struct {
+	iVerbose  int
+	objLogOut *os.File
+	fnUILog   func(string)
 }
