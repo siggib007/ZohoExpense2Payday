@@ -40,6 +40,7 @@ type UI struct {
 }
 
 func NewUI(objCfg *Config, objLogger *Logger, strBaseDir string) *UI {
+	os.Setenv("LIBGL_ALWAYS_SOFTWARE", "1")
 	return &UI{
 		objApp:       app.New(),
 		objCfg:       objCfg,
@@ -91,6 +92,9 @@ func (u *UI) buildRunTab() fyne.CanvasObject {
 
 	// Employee ID dropdown
 	u.objEmployeeID = widget.NewSelect([]string{"name", "kennitala", "kt"}, func(strVal string) {
+		if u.objKennitala == nil {
+			return
+		}
 		u.objKennitala.Hidden = strings.ToLower(strVal) == "name"
 		u.objKennitala.Refresh()
 	})
