@@ -6,6 +6,29 @@ You need to download both an attachment zip file and the csv export of the repor
 
 ## Preparations
 
+### Downloading
+
+To download this, go to https://github.com/siggib007/ZohoExpense2Payday/releases (if you are reading this on GitHub, it's the Release heading on the right-hand side, under About project), find the latest release, and expand the Assets header. In there, find the binary that suits your platform.
+
+#### Windows
+
+For 90% of Windows users, you'll need -am64.exe. It should work on ARM platforms as well. If you want to be sure, check settings -> system -> about, the system type line. will show either an x64-based processor or an ARM-based processor. If you are on an ARM-based processor, -arm64.exe will work better. 
+
+#### Linux
+
+Again, most Linux machines run x64 processors; notable exceptions include single-board computers like the Raspberry Pi. Run `uname -m` in the terminal. If the output is x86_64, you need the linux-amd64 executable; it does not matter what flavor of Linux you have, all that matters is what sort of system is running your Linux flavor. If it is not x86_64 you'll need the arm package. BTW x86_32 is not supported
+
+#### macOS
+
+Mac Download:
+- Apple Silicon (M1/M2/M3/M4) → ZohoExpense2Payday_mac_arm
+  (Most Macs bought after 2020)
+- Intel → ZohoExpense2Payday_mac-intel
+  (Macs bought before 2021)
+
+Not sure which you have?
+Apple menu → About This Mac → look for "Apple M1/M2/M3" or "Intel"
+
 ### Zoho Expense Preparations
 
 Start by ensuring the accounting codes for each of your active categories match the account codes in the Payday chart of accounts. If those don't line up or an account code is missing, the application will abort.
