@@ -7,6 +7,8 @@
 *.dll
 *.so
 *.dylib
+# Mac and Linux binaries (no extension)
+ZohoExpense2Payday_*
 
 # Test binary, built with `go test -c`
 *.test
