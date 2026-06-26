@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/siggib007/goutils/kennitala"
+)
 
 func TestValidateKT(t *testing.T) {
 	// Valid — fake but mathematically correct, Jan 01 2010
@@ -10,7 +14,7 @@ func TestValidateKT(t *testing.T) {
 		"010110 3190", // with space
 	}
 	for _, strKT := range lstValid {
-		if !ValidateKT(strKT) {
+		if !kennitala.ValidateKT(strKT) {
 			t.Errorf("expected %s to be valid but got invalid", strKT)
 		}
 	}
@@ -26,7 +30,7 @@ func TestValidateKT(t *testing.T) {
 		"0101103100", // wrong check digit
 	}
 	for _, strKT := range lstInvalid {
-		if ValidateKT(strKT) {
+		if kennitala.ValidateKT(strKT) {
 			t.Errorf("expected %s to be invalid but got valid", strKT)
 		}
 	}

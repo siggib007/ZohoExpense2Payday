@@ -9,6 +9,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/siggib007/goutils/apiclient"
+	"github.com/siggib007/goutils/kennitala"
+	"github.com/siggib007/goutils/logger"
 )
 
 const (
@@ -55,7 +59,7 @@ func main() {
 	fmt.Printf("Logs saved to %s\n", *strLogFile)
 
 	// Initialize logger
-	objLogger, err := NewLogger(*strLogFile, *iVerbose)
+	objLogger, err := logger.NewLogger(*strLogFile, *iVerbose)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create log file: %s\n", err)
 		os.Exit(1)
@@ -143,13 +147,13 @@ func main() {
 	strKennitala := ""
 	if strEmpLower != "name" {
 		strKennitala = getInput("Please enter the kennitala of the user: ")
-		for !ValidateKT(strKennitala) {
+		for !kennitala.ValidateKT(strKennitala) {
 			strKennitala = getInput("Invalid kennitala. Please enter a valid kennitala: ")
 		}
 	}
 
 	// Initialize API client and CSV handler
-	objAPI := NewAPIClient(objCfg.Proxy, iTimeOut, iMinQuiet, objLogger)
+	objAPI := apiclient.NewAPIClient(objCfg.Proxy, iTimeOut, iMinQuiet, objLogger)
 	objCSV := NewCSVHandler(objCfg.CSVDelim, objLogger)
 
 	// Build headers
@@ -166,12 +170,12 @@ func main() {
 	}
 	objLogger.Log("Requesting access token")
 	objResp := objAPI.MakeAPICall(objCfg.BaseURL+"auth/token", dictHeader, "post", dictAuthBody, nil, "", "")
-	if !objResp.bSuccess {
-		objLogger.LogEntry(fmt.Sprintf("Failed to get access token: %s", objResp.strError), 0, true)
+	if !objResp.BSuccess {
+		objLogger.LogEntry(fmt.Sprintf("Failed to get access token: %s", objResp.StrError), 0, true)
 	}
 
 	// Extract access token
-	dictAuthResp, ok := objResp.objData.(map[string]any)
+	dictAuthResp, ok := objResp.ObjData.(map[string]any)
 	if !ok {
 		objLogger.LogEntry("Unexpected auth response format", 0, true)
 	}
@@ -184,10 +188,10 @@ func main() {
 
 	// Fetch accounts
 	objResp = objAPI.MakeAPICall(objCfg.BaseURL+"accounting/accounts", dictHeader, "get", nil, nil, "", "")
-	if !objResp.bSuccess {
-		objLogger.LogEntry(fmt.Sprintf("Failed to fetch accounts: %s", objResp.strError), 0, true)
+	if !objResp.BSuccess {
+		objLogger.LogEntry(fmt.Sprintf("Failed to fetch accounts: %s", objResp.StrError), 0, true)
 	}
-	lstAccounts, ok := objResp.objData.([]any)
+	lstAccounts, ok := objResp.ObjData.([]any)
 	if !ok {
 		objLogger.LogEntry("Unexpected accounts response format", 0, true)
 	}
@@ -223,10 +227,10 @@ func main() {
 
 	// Fetch payment types
 	objResp = objAPI.MakeAPICall(objCfg.BaseURL+"expenses/paymenttypes", dictHeader, "get", nil, nil, "", "")
-	if !objResp.bSuccess {
-		objLogger.LogEntry(fmt.Sprintf("Failed to fetch payment types: %s", objResp.strError), 0, true)
+	if !objResp.BSuccess {
+		objLogger.LogEntry(fmt.Sprintf("Failed to fetch payment types: %s", objResp.StrError), 0, true)
 	}
-	lstPayTypes, ok := objResp.objData.([]any)
+	lstPayTypes, ok := objResp.ObjData.([]any)
 	if !ok {
 		objLogger.LogEntry("Unexpected payment types response format", 0, true)
 	}
@@ -259,9 +263,9 @@ func main() {
 
 	submitEntry := func() {
 		objResp := objAPI.MakeAPICall(strURL, dictHeader, "post", dictBody, lstFiles, "", "")
-		objLogger.LogEntry(fmt.Sprintf("APIResp success: %v", objResp.bSuccess), 5, false)
-		if !objResp.bSuccess {
-			objLogger.Log(fmt.Sprintf("Failed entry %s: %s", strEntryID, objResp.strError))
+		objLogger.LogEntry(fmt.Sprintf("APIResp success: %v", objResp.BSuccess), 5, false)
+		if !objResp.BSuccess {
+			objLogger.Log(fmt.Sprintf("Failed entry %s: %s", strEntryID, objResp.StrError))
 			lstBadEntryIDs = append(lstBadEntryIDs, strEntryID)
 		} else {
 			objLogger.Log(fmt.Sprintf("Successfully submitted entry %s", strEntryID))

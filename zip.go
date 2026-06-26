@@ -7,9 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/siggib007/goutils/logger"
 )
 
-func extractZip(strZipPath string, objLogger *Logger) (string, error) {
+func extractZip(strZipPath string, objLogger *logger.Logger) (string, error) {
 	// Create temp directory
 	strTempDir, err := os.MkdirTemp("", "zoho_attachments_*")
 	if err != nil {

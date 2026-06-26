@@ -7,14 +7,16 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/siggib007/goutils/logger"
 )
 
 type CSVHandler struct {
-	objLogger *Logger
+	objLogger *logger.Logger
 	chrDelim  rune
 }
 
-func NewCSVHandler(chrDelim rune, objLogger *Logger) *CSVHandler {
+func NewCSVHandler(chrDelim rune, objLogger *logger.Logger) *CSVHandler {
 	return &CSVHandler{
 		chrDelim:  chrDelim,
 		objLogger: objLogger,
