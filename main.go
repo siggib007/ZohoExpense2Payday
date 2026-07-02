@@ -64,7 +64,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Failed to create log file: %s\n", err)
 		os.Exit(1)
 	}
+
 	defer objLogger.Close()
+	defer objLogger.RecoverAbort()
 
 	objLogger.Log(fmt.Sprintf("Starting up script %s on %s", strScriptName, strScriptHost))
 	objLogger.Log(fmt.Sprintf("Verbosity set to %d", *iVerbose))
