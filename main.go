@@ -170,8 +170,13 @@ func main() {
 		"clientId":     objCfg.ClientID,
 		"clientSecret": objCfg.ClientSecret,
 	}
+
+	// Build URL string
+	dictMyParams := make(map[string]string)
+	strURL := apiclient.BuildURL(objCfg.BaseURL, "auth/token", dictMyParams)
+
 	objLogger.Log("Requesting access token")
-	objResp := objAPI.MakeAPICall(objCfg.BaseURL+"auth/token", dictHeader, "post", dictAuthBody, nil, "", "")
+	objResp := objAPI.MakeAPICall(strURL, dictHeader, "post", dictAuthBody, nil, "", "")
 	if !objResp.BSuccess {
 		objLogger.LogEntry(fmt.Sprintf("Failed to get access token: %s", objResp.StrError), 0, true)
 	}
@@ -188,8 +193,12 @@ func main() {
 	objLogger.Log("Successfully obtained access token")
 	dictHeader["Authorization"] = "Bearer " + strAccessToken
 
+	// Build URL string
+	dictMyParams = make(map[string]string)
+	strURL = apiclient.BuildURL(objCfg.BaseURL, "accounting/accounts", dictMyParams)
+
 	// Fetch accounts
-	objResp = objAPI.MakeAPICall(objCfg.BaseURL+"accounting/accounts", dictHeader, "get", nil, nil, "", "")
+	objResp = objAPI.MakeAPICall(strURL, dictHeader, "get", nil, nil, "", "")
 	if !objResp.BSuccess {
 		objLogger.LogEntry(fmt.Sprintf("Failed to fetch accounts: %s", objResp.StrError), 0, true)
 	}
@@ -226,9 +235,12 @@ func main() {
 	if len(lstBadAcctCodes) > 0 {
 		objLogger.LogEntry(fmt.Sprintf("Unknown account codes: %v", lstBadAcctCodes), 0, true)
 	}
+	// Build URL string
+	dictMyParams = make(map[string]string)
+	strURL = apiclient.BuildURL(objCfg.BaseURL, "expenses/paymenttypes", dictMyParams)
 
 	// Fetch payment types
-	objResp = objAPI.MakeAPICall(objCfg.BaseURL+"expenses/paymenttypes", dictHeader, "get", nil, nil, "", "")
+	objResp = objAPI.MakeAPICall(strURL, dictHeader, "get", nil, nil, "", "")
 	if !objResp.BSuccess {
 		objLogger.LogEntry(fmt.Sprintf("Failed to fetch payment types: %s", objResp.StrError), 0, true)
 	}
@@ -256,8 +268,12 @@ func main() {
 	strPayTypeID := fmt.Sprintf("%v", lstPayTypes[iPayType].(map[string]any)["id"])
 	objLogger.Log(fmt.Sprintf("Payment type ID %d: %s was selected", iPayType, strPayTypeID))
 
+	// Build URL string
+	dictMyParams = make(map[string]string)
+	strURL = apiclient.BuildURL(objCfg.BaseURL, "expenses", dictMyParams)
+
 	// Process expense entries
-	strURL := objCfg.BaseURL + "expenses"
+	strURL = objCfg.BaseURL + "expenses"
 	strEntryID := ""
 	var dictBody map[string]any
 	var lstFiles map[string]string

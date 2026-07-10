@@ -4,4 +4,4 @@ go 1.26.2
 
 require gopkg.in/ini.v1 v1.67.3
 
-require github.com/siggib007/goutils v0.1.0
+require github.com/siggib007/goutils v0.1.1
