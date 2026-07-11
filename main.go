@@ -13,6 +13,7 @@ import (
 	"github.com/siggib007/goutils/apiclient"
 	"github.com/siggib007/goutils/kennitala"
 	"github.com/siggib007/goutils/logger"
+	"github.com/siggib007/goutils/utils"
 )
 
 const (
@@ -72,6 +73,13 @@ func main() {
 	objLogger.Log(fmt.Sprintf("Verbosity set to %d", *iVerbose))
 	objLogger.Log(fmt.Sprintf("Config file set to: %s", *strConfFile))
 
+	bIsDir, _, err := utils.CheckPath(*strConfFile)
+	if err != nil {
+		objLogger.LogEntry(fmt.Sprintf("Invalid config path: %v", err), 0, true)
+	}
+	if bIsDir {
+		objLogger.LogEntry("Config path, is just a directory not a file:", 0, true)
+	}
 	// Load config — three tier: INI -> env vars -> CLI flags
 	objCfg := defaultConfig()
 	objCfg.Verbose = *iVerbose
