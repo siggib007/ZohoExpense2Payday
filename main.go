@@ -171,6 +171,15 @@ func main() {
 		objLogger.LogEntry("Employee ID must be either name, kt or kennitala", 0, true)
 	}
 
+	if _, err := os.Stat(objCfg.Attachments); os.IsNotExist(err) {
+		objLogger.LogEntry(fmt.Sprintf("Attachments path %s does not exist", objCfg.Attachments), 0, false)
+		strInput := utils.GetInput("Please provide a new path for attachments: ")
+		if _, err := os.Stat(strInput); os.IsNotExist(err) {
+			objLogger.LogEntry(fmt.Sprintf("Attachments path %s does not exist", objCfg.Attachments), 0, true)
+		}
+		objCfg.Attachments = strInput
+	}
+
 	// Handle zip extraction or validate attachments path
 	if isZipFile(objCfg.Attachments) {
 		if _, err := os.Stat(objCfg.Attachments); os.IsNotExist(err) {
@@ -183,15 +192,6 @@ func main() {
 		defer os.RemoveAll(strTempDir)
 		objCfg.Attachments = strTempDir
 		objLogger.Log(fmt.Sprintf("Using extracted attachments from %s", strTempDir))
-	} else {
-		if _, err := os.Stat(objCfg.Attachments); os.IsNotExist(err) {
-			objLogger.LogEntry(fmt.Sprintf("Attachments path %s does not exist", objCfg.Attachments), 0, false)
-			strInput := utils.GetInput("Please provide a new path for attachments: ")
-			if _, err := os.Stat(strInput); os.IsNotExist(err) {
-				objLogger.LogEntry(fmt.Sprintf("Attachments path %s does not exist", objCfg.Attachments), 0, true)
-			}
-			objCfg.Attachments = strInput
-		}
 	}
 
 	// Resolve input file
