@@ -171,10 +171,14 @@ func main() {
 		objLogger.Log(fmt.Sprintf("Using extracted attachments from %s", strTempDir))
 	} else {
 		if _, err := os.Stat(objCfg.Attachments); os.IsNotExist(err) {
-			objLogger.LogEntry(fmt.Sprintf("Attachments path %s does not exist", objCfg.Attachments), 0, true)
+			objLogger.LogEntry(fmt.Sprintf("Attachments path %s does not exist", objCfg.Attachments), 0, false)
+			strInput := utils.GetInput("Please provide a new path for attachments: ")
+			if _, err := os.Stat(strInput); os.IsNotExist(err) {
+				objLogger.LogEntry(fmt.Sprintf("Attachments path %s does not exist", objCfg.Attachments), 0, true)
+			}
+			objCfg.Attachments = strInput
 		}
 	}
-	objCfg.Attachments = strings.ReplaceAll(objCfg.Attachments, "\\", "/")
 
 	// Resolve input file
 	if objCfg.InFile == "" || *bPrompt {
@@ -322,7 +326,6 @@ func main() {
 	strURL = apiclient.BuildURL(objCfg.BaseURL, "expenses", dictMyParams)
 
 	// Process expense entries
-	strURL = objCfg.BaseURL + "expenses"
 	strEntryID := ""
 	var dictBody map[string]any
 	var lstFiles map[string]string
@@ -379,7 +382,7 @@ func main() {
 			lstFiles = make(map[string]string)
 			lstAttachments := ListAttachments(objCfg.Attachments, strEntryID+"*")
 			for iIndex, strFile := range lstAttachments {
-				strFilePath := objCfg.Attachments + "/" + strFile
+				strFilePath := filepath.Join(objCfg.Attachments, strFile)
 				if _, err := os.Stat(strFilePath); err == nil {
 					lstFiles[fmt.Sprintf("attachment%d", iIndex)] = strFilePath
 				} else {
