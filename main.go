@@ -76,7 +76,8 @@ func main() {
 		bFail = true
 	}
 	if bFail {
-		lstFiles := utils.ListFiles(objPaths.StrExeDir, ".ini")
+		objLogger.Log(fmt.Sprintf("Searching for a viable config file in %v", objPaths.StrExeDir))
+		lstFiles := utils.FindFilesExt(objPaths.StrExeDir, ".ini")
 		if len(lstFiles) == 0 {
 			objLogger.Log("Failed to find any configuration files in the execution directory")
 			*strConfFile = utils.GetInput("Please provide a full path to the desired configuration file: ")
@@ -182,7 +183,7 @@ func main() {
 	if objCfg.InFile == "" {
 		objLogger.LogEntry("No input file provided, exiting", 0, true)
 	}
-	if !strings.HasSuffix(strings.ToLower(objCfg.InFile), ".csv") {
+	if !strings.EqualFold(filepath.Ext(objCfg.InFile), ".csv") {
 		objLogger.LogEntry(fmt.Sprintf("Only CSV files supported, got: %s", objCfg.InFile), 0, true)
 	}
 
@@ -308,10 +309,12 @@ func main() {
 	strPayTypeID := fmt.Sprintf("%v", lstPayTypes[iPayType].(map[string]any)["id"])
 	objLogger.Log(fmt.Sprintf("Payment type ID %d: %s was selected", iPayType, strPayTypeID))
 
-	objLogger.Log(fmt.Sprintf("Ready to start processing %v", objCfg.Environment))
-	strConfirmation := utils.GetInput("Please enter the environment name to confirm ready to proceed")
-	if strConfirmation != objCfg.Environment {
-		objLogger.LogEntry("Confirmation doesn't match, unable to proceed", 0, true)
+	if objCfg.Environment != "" {
+		objLogger.Log(fmt.Sprintf("Ready to start processing %v\n", objCfg.Environment))
+		strConfirmation := utils.GetInput("Please enter the environment name to confirm ready to proceed: ")
+		if strConfirmation != objCfg.Environment {
+			objLogger.LogEntry("Confirmation doesn't match, unable to proceed", 0, true)
+		}
 	}
 
 	// Build URL string

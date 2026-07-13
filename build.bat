@@ -4,3 +4,4 @@ set GOOS=linux&& set GOARCH=arm64&& go build -o bin\ZohoExpense2Payday_linux-arm
 set GOOS=linux&& set GOARCH=amd64&& go build -o bin\ZohoExpense2Payday_linux-amd64 .
 set GOOS=windows&& set GOARCH=amd64&& go build -o bin\ZohoExpense2Payday-amd64.exe .
 set GOOS=windows&& set GOARCH=arm64&& go build -o bin\ZohoExpense2Payday-arm64.exe .
+set GOOS=windows&& set GOARCH=amd64
