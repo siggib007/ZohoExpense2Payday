@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -16,37 +15,13 @@ import (
 )
 
 func main() {
-	// TODO Think about creating a Default path functions
-
-	// Establish base directory and script name
-	strExePath, err := os.Executable()
+	// Create default base paths
+	objPaths, err := utils.BasePaths()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "cannot determine executable path: "+err.Error())
+		fmt.Fprintln(os.Stderr, "cannot determine base paths: "+err.Error())
 		os.Exit(3)
 	}
-	strExeDir := filepath.Dir(strExePath)
-	strScriptName := filepath.Base(strExePath)
-
-	strISO := time.Now().Format("-2006-01-02T15-04-05")
-
-	// Log directory
-	strLogDir := filepath.Join(strExeDir, "Logs")
-	if !utils.ChkDir(strLogDir) {
-		fmt.Fprintln(os.Stderr, "Log directory doesn't exists and couldn't create it")
-		os.Exit(3)
-	}
-
-	// Default config and log file paths
-	strBaseName := strScriptName
-	iDotPos := strings.LastIndex(strScriptName, ".")
-	if iDotPos >= 1 {
-		strBaseName = strScriptName[:iDotPos]
-	}
-	strConfName := strBaseName + ".ini"
-	strDefConf := filepath.Join(strExeDir, strConfName)
-
-	strLogFilename := strBaseName + strISO + ".log"
-	strDefLogFile := filepath.Join(strLogDir, strLogFilename)
+	strScriptName := objPaths.StrScriptName
 
 	// Load config — three tier: INI -> env vars -> CLI flags
 	objCfg := defaultConfig()
@@ -57,16 +32,16 @@ func main() {
 	strAttachments := flag.String("a", "", "Path to attachments directory or attachment zip file")
 	bDeductible := flag.Bool("d", true, "Is VAT deductible? True/False. Default: True")
 	iVerbose := flag.Int("v", 1, "Verbosity level (1-5)")
-	strConfFile := flag.String("c", strDefConf, "Path to configuration file, defaults to file with same name as the application in the application directory.")
+	strConfFile := flag.String("c", objPaths.StrDefConf, "Path to configuration file, defaults to file with same name as the application in the application directory.")
 	strBaseURL := flag.String("u", "", "Base URL for API calls")
 	strEmployee := flag.String("e", "name", "Employee identification for milage expenses: name, kt or kennitala. Default: name")
 	strProxy := flag.String("x", "", "Proxy for API calls")
 	iTimeout := flag.Int("t", objCfg.TimeOut, "Timeout value on API calls, number of seconds")
-	strLogFile := flag.String("l", strDefLogFile, "Path to log file")
+	strLogFile := flag.String("l", objPaths.StrDefLogFile, "Path to log file")
 	flag.Parse()
 
 	fmt.Print("This is a script to transfer expense items from Zoho Expense to Payday.\n")
-	fmt.Printf("Running from: %s\n", strExeDir)
+	fmt.Printf("Running from: %s\n", objPaths.StrExeDir)
 	fmt.Printf("The time now is %s\n", time.Now().Format("Monday 02 January 2006 15:04:05"))
 	fmt.Printf("Logs saved to %s\n", *strLogFile)
 
