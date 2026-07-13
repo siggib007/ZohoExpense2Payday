@@ -31,7 +31,7 @@ func main() {
 	strInputFile := flag.String("i", "", "Path to expense CSV file to be processed")
 	bPrompt := flag.Bool("p", false, "Prompt for input file")
 	strAttachments := flag.String("a", "", "Path to attachments directory or attachment zip file")
-	bDeductible := flag.Bool("d", true, "Is VAT deductible? True/False. Default: True")
+	bDeductible := flag.Bool("d", objCfg.Deductible, "Is VAT deductible? True/False. Default: True")
 	iVerbose := flag.Int("v", 1, "Verbosity level (1-5)")
 	strConfFile := flag.String("c", objPaths.StrDefConf, "Path to configuration file, defaults to file with same name as the application in the application directory.")
 	strBaseURL := flag.String("u", "", "Base URL for API calls")
@@ -79,17 +79,19 @@ func main() {
 		lstFiles := utils.FindFilesExt(objPaths.StrExeDir, ".ini")
 		if len(lstFiles) == 0 {
 			objLogger.Log("Failed to find any configuration files in the execution directory")
-			*strConfFile = utils.GetInput("Please provide a full path to the desired configuration file: ")
-			if *strConfFile == "" || !utils.FileExists(*strConfFile) {
+			*strConfFile = utils.GetInput("Please provide a full path to the desired configuration file, or specify env to use environment variables instead: ")
+			if *strConfFile != "env" && (*strConfFile == "" || !utils.FileExists(*strConfFile)) {
 				objLogger.LogEntry("Can't go on without a valid configuration file", 0, true)
 			}
 		} else if len(lstFiles) == 1 {
 			objLogger.Log(fmt.Sprintf("Found a possible configuration files, do you want %v ?", lstFiles[0]))
-			strResponse := utils.GetInput("Type yes to accept, or provide a full path to the desired configuration file: ")
+			strResponse := utils.GetInput("Type yes to accept, or provide a full path to the desired configuration file, or specify env to use environment variables instead: ")
 			if strResponse == "yes" {
 				*strConfFile = filepath.Join(objPaths.StrExeDir, lstFiles[0])
+			} else {
+				*strConfFile = strResponse
 			}
-			if *strConfFile == "" || !utils.FileExists(*strConfFile) {
+			if *strConfFile != "env" && (*strConfFile == "" || !utils.FileExists(*strConfFile)) {
 				objLogger.LogEntry("Can't go on without a valid configuration file", 0, true)
 			}
 		} else {
@@ -98,7 +100,8 @@ func main() {
 				objLogger.Log(fmt.Sprintf("   %d: %s", i+1, strEntry))
 			}
 			objLogger.Log(fmt.Sprintf("   %d: Provide manually", len(lstFiles)+1))
-			objLogger.Log(fmt.Sprintf("   %d: Abort", len(lstFiles)+2))
+			objLogger.Log(fmt.Sprintf("   %d: Use environment variables", len(lstFiles)+2))
+			objLogger.Log(fmt.Sprintf("   %d: Abort", len(lstFiles)+3))
 			strResponse := utils.GetInput("Type the number of your choice: ")
 			strInput := strings.TrimSpace(strResponse)
 			iChoice, err := strconv.Atoi(strInput)
@@ -108,15 +111,18 @@ func main() {
 			objLogger.Log(fmt.Sprintf("You selected %v", iChoice))
 			objLogger.LogEntry(fmt.Sprintf("List len: %v", len(lstFiles)), 3, false)
 
-			if iChoice < 1 || iChoice > len(lstFiles)+2 {
+			if iChoice < 1 || iChoice > len(lstFiles)+3 {
 				objLogger.LogEntry(fmt.Sprintf("selection %v out of range!! Aborting.", strResponse), 0, true)
 			}
-			if iChoice == len(lstFiles)+2 {
+			if iChoice == len(lstFiles)+3 {
 				objLogger.LogEntry("OK Got it, bailing", 0, true)
+			}
+			if iChoice == len(lstFiles)+2 {
+				*strConfFile = "env"
 			}
 			if iChoice == len(lstFiles)+1 {
 				*strConfFile = utils.GetInput("Please specify full path for your desired config file: ")
-				if *strConfFile == "" || !utils.FileExists(*strConfFile) {
+				if *strConfFile != "env" && (*strConfFile == "" || !utils.FileExists(*strConfFile)) {
 					objLogger.LogEntry("Can't go on without a valid configuration file", 0, true)
 				}
 			}
@@ -124,7 +130,7 @@ func main() {
 				*strConfFile = filepath.Join(objPaths.StrExeDir, lstFiles[iChoice-1])
 				objLogger.Log(fmt.Sprintf("Conf file is now %v", *strConfFile))
 			}
-			if *strConfFile == "" || !utils.FileExists(*strConfFile) {
+			if *strConfFile != "env" && (*strConfFile == "" || !utils.FileExists(*strConfFile)) {
 				objLogger.LogEntry("Can't go on without a valid configuration file", 0, true)
 			}
 		}
@@ -132,10 +138,19 @@ func main() {
 
 	objCfg.Verbose = *iVerbose
 
-	if err := parseINI(*strConfFile, &objCfg); err != nil {
-		objLogger.Log(fmt.Sprintf("Could not read config file %s: %s", *strConfFile, err))
+	if *strConfFile != "env" {
+		if err := parseINI(*strConfFile, &objCfg); err != nil {
+			objLogger.Log(fmt.Sprintf("Could not read config file %s: %s", *strConfFile, err))
+		}
+	} else {
+		objLogger.Log("Not loading configuration file, relying on environment variables. Make sure they are set correctly")
 	}
 	applyEnvVars(&objCfg)
+
+	dictFlagsSet := make(map[string]bool)
+	flag.Visit(func(objFlag *flag.Flag) {
+		dictFlagsSet[objFlag.Name] = true
+	})
 
 	// CLI flags override everything
 	if *strInputFile != "" {
@@ -154,8 +169,12 @@ func main() {
 		objCfg.Proxy = *strProxy
 	}
 
-	objCfg.Deductible = *bDeductible
-	objCfg.TimeOut = *iTimeout
+	if dictFlagsSet["d"] {
+		objCfg.Deductible = *bDeductible
+	}
+	if dictFlagsSet["t"] {
+		objCfg.TimeOut = *iTimeout
+	}
 
 	// Validate required config
 	if objCfg.BaseURL == "" || objCfg.ClientID == "" || objCfg.ClientSecret == "" {
