@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strconv"
 	"strings"
 
 	"gopkg.in/ini.v1"
@@ -11,6 +12,7 @@ type Config struct {
 	BaseURL      string
 	ClientID     string
 	ClientSecret string
+	Environment  string
 	Attachments  string
 	InFile       string
 	Proxy        string
@@ -20,6 +22,8 @@ type Config struct {
 	LogFile      string
 	ConfFile     string
 	Verbose      int
+	MinQuiet     int
+	TimeOut      int
 }
 
 func defaultConfig() Config {
@@ -28,6 +32,8 @@ func defaultConfig() Config {
 		Deductible: true,
 		EmployeeID: "name",
 		Verbose:    1,
+		MinQuiet:   2,
+		TimeOut:    15,
 	}
 }
 
@@ -38,32 +44,41 @@ func parseINI(strPath string, objCfg *Config) error {
 	}
 
 	objSec := objFile.Section("")
-	if v := objSec.Key("API_URL").String(); v != "" {
-		objCfg.BaseURL = v
+	if strValue := objSec.Key("API_URL").String(); strValue != "" {
+		objCfg.BaseURL = strValue
 	}
-	if v := objSec.Key("CLIENT_ID").String(); v != "" {
-		objCfg.ClientID = v
+	if strValue := objSec.Key("CLIENT_ID").String(); strValue != "" {
+		objCfg.ClientID = strValue
 	}
-	if v := objSec.Key("CLIENT_SECRET").String(); v != "" {
-		objCfg.ClientSecret = v
+	if strValue := objSec.Key("CLIENT_SECRET").String(); strValue != "" {
+		objCfg.ClientSecret = strValue
 	}
-	if v := objSec.Key("ATTACHMENTS").String(); v != "" {
-		objCfg.Attachments = v
+	if strValue := objSec.Key("ATTACHMENTS").String(); strValue != "" {
+		objCfg.Attachments = strValue
 	}
-	if v := objSec.Key("IN_FILE").String(); v != "" {
-		objCfg.InFile = v
+	if strValue := objSec.Key("IN_FILE").String(); strValue != "" {
+		objCfg.InFile = strValue
 	}
-	if v := objSec.Key("PROXY").String(); v != "" {
-		objCfg.Proxy = v
+	if strValue := objSec.Key("PROXY").String(); strValue != "" {
+		objCfg.Proxy = strValue
 	}
-	if v := objSec.Key("CSV_DELIM").String(); v != "" {
-		objCfg.CSVDelim = rune(v[0])
+	if strValue := objSec.Key("CSV_DELIM").String(); strValue != "" {
+		objCfg.CSVDelim = rune(strValue[0])
 	}
-	if v := objSec.Key("DEDUCTABLE").String(); v != "" {
-		objCfg.Deductible = strings.ToLower(v) == "true"
+	if strValue := objSec.Key("DEDUCTABLE").String(); strValue != "" {
+		objCfg.Deductible = strings.ToLower(strValue) == "true"
 	}
-	if v := objSec.Key("EMPLOYEE_ID").String(); v != "" {
-		objCfg.EmployeeID = v
+	if strValue := objSec.Key("EMPLOYEE_ID").String(); strValue != "" {
+		objCfg.EmployeeID = strValue
+	}
+	if strValue := objSec.Key("Environment").String(); strValue != "" {
+		objCfg.Environment = strValue
+	}
+	if iValue, err := objSec.Key("TimeOut").Int(); err == nil {
+		objCfg.TimeOut = iValue
+	}
+	if iValue, err := objSec.Key("MinQuiet").Int(); err == nil {
+		objCfg.MinQuiet = iValue
 	}
 	return nil
 }
@@ -92,5 +107,11 @@ func applyEnvVars(cfg *Config) {
 	}
 	if strValue := os.Getenv("EMPLOYEE_ID"); strValue != "" {
 		cfg.EmployeeID = strValue
+	}
+	if strValue := os.Getenv("TIMEOUT"); strValue != "" {
+		iVal, err := strconv.Atoi(strValue)
+		if err == nil {
+			cfg.TimeOut = iVal
+		}
 	}
 }

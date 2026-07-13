@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"os"
@@ -16,46 +15,58 @@ import (
 	"github.com/siggib007/goutils/utils"
 )
 
-const (
-	iTimeOut  = 180
-	iMinQuiet = 2
-)
-
 func main() {
+	// TODO Think about creating a Default path functions
+
 	// Establish base directory and script name
-	strRealPath, _ := filepath.Abs(os.Args[0])
-	strRealPath = strings.ReplaceAll(strRealPath, "\\", "/")
-	iLoc := strings.LastIndex(strRealPath, "/")
-	strBaseDir := strRealPath[:iLoc] + "/"
-	strScriptName := filepath.Base(os.Args[0])
-	strScriptHost, _ := os.Hostname()
-	strScriptHost = strings.ToUpper(strScriptHost)
-	strISO := time.Now().Format("-2006-01-02-15-04-05")
+	strExePath, err := os.Executable()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "cannot determine executable path: "+err.Error())
+		os.Exit(3)
+	}
+	strExeDir := filepath.Dir(strExePath)
+	strScriptName := filepath.Base(strExePath)
+
+	strISO := time.Now().Format("-2006-01-02T15-04-05")
 
 	// Log directory
-	strLogDir := strBaseDir + "Logs/"
-	chkdir(strLogDir)
+	strLogDir := filepath.Join(strExeDir, "Logs")
+	if !utils.ChkDir(strLogDir) {
+		fmt.Fprintln(os.Stderr, "Log directory doesn't exists and couldn't create it")
+		os.Exit(3)
+	}
 
 	// Default config and log file paths
-	iLoc = strings.LastIndex(strScriptName, ".")
-	strDefLogFile := strLogDir + strScriptName[:iLoc] + strISO + ".log"
-	strDefConf := strRealPath[:strings.LastIndex(strRealPath, ".")] + ".ini"
+	strBaseName := strScriptName
+	iDotPos := strings.LastIndex(strScriptName, ".")
+	if iDotPos >= 1 {
+		strBaseName = strScriptName[:iDotPos]
+	}
+	strConfName := strBaseName + ".ini"
+	strDefConf := filepath.Join(strExeDir, strConfName)
+
+	strLogFilename := strBaseName + strISO + ".log"
+	strDefLogFile := filepath.Join(strLogDir, strLogFilename)
+
+	// Load config — three tier: INI -> env vars -> CLI flags
+	objCfg := defaultConfig()
 
 	// CLI flags
 	strInputFile := flag.String("i", "", "Path to expense CSV file to be processed")
 	bPrompt := flag.Bool("p", false, "Prompt for input file")
 	strAttachments := flag.String("a", "", "Path to attachments directory or attachment zip file")
-	strDeductible := flag.String("d", "True", "Is VAT deductible? True/False. Default: True")
+	bDeductible := flag.Bool("d", true, "Is VAT deductible? True/False. Default: True")
 	iVerbose := flag.Int("v", 1, "Verbosity level (1-5)")
 	strConfFile := flag.String("c", strDefConf, "Path to configuration file, defaults to file with same name as the application in the application directory.")
 	strBaseURL := flag.String("u", "", "Base URL for API calls")
 	strEmployee := flag.String("e", "name", "Employee identification for milage expenses: name, kt or kennitala. Default: name")
 	strProxy := flag.String("x", "", "Proxy for API calls")
+	iTimeout := flag.Int("t", objCfg.TimeOut, "Timeout value on API calls, number of seconds")
 	strLogFile := flag.String("l", strDefLogFile, "Path to log file")
 	flag.Parse()
 
-	fmt.Printf("This is a script to transfer expense items from Zoho Expense to Payday.\n")
-	fmt.Printf("Running from: %s\n", strRealPath)
+	fmt.Print("This is a script to transfer expense items from Zoho Expense to Payday.\n")
+	fmt.Printf("Running from: %s\n", strExeDir)
 	fmt.Printf("The time now is %s\n", time.Now().Format("Monday 02 January 2006 15:04:05"))
 	fmt.Printf("Logs saved to %s\n", *strLogFile)
 
@@ -68,6 +79,11 @@ func main() {
 
 	defer objLogger.Close()
 	defer objLogger.RecoverAbort()
+	strScriptHost, err := os.Hostname()
+	if err != nil {
+		objLogger.Log("Failed to determine hostname: " + err.Error())
+		strScriptHost = "HOSTNAME-LOOKUP-FAILED"
+	}
 
 	objLogger.Log(fmt.Sprintf("Starting up script %s on %s", strScriptName, strScriptHost))
 	objLogger.Log(fmt.Sprintf("Verbosity set to %d", *iVerbose))
@@ -80,8 +96,7 @@ func main() {
 	if bIsDir {
 		objLogger.LogEntry("Config path, is just a directory not a file:", 0, true)
 	}
-	// Load config — three tier: INI -> env vars -> CLI flags
-	objCfg := defaultConfig()
+
 	objCfg.Verbose = *iVerbose
 
 	if err := parseINI(*strConfFile, &objCfg); err != nil {
@@ -105,9 +120,9 @@ func main() {
 	if *strProxy != "" {
 		objCfg.Proxy = *strProxy
 	}
-	if *strDeductible != "" {
-		objCfg.Deductible = strings.ToLower(*strDeductible) == "true"
-	}
+
+	objCfg.Deductible = *bDeductible
+	objCfg.TimeOut = *iTimeout
 
 	// Validate required config
 	if objCfg.BaseURL == "" || objCfg.ClientID == "" || objCfg.ClientSecret == "" {
@@ -144,7 +159,7 @@ func main() {
 
 	// Resolve input file
 	if objCfg.InFile == "" || *bPrompt {
-		objCfg.InFile = getInput("Please enter the path to the file to be processed: ")
+		objCfg.InFile = utils.GetInput("Please enter the path to the file to be processed: ")
 	}
 	if objCfg.InFile == "" {
 		objLogger.LogEntry("No input file provided, exiting", 0, true)
@@ -156,14 +171,14 @@ func main() {
 	// Handle kennitala for mileage entries
 	strKennitala := ""
 	if strEmpLower != "name" {
-		strKennitala = getInput("Please enter the kennitala of the user: ")
+		strKennitala = utils.GetInput("Please enter the kennitala of the user: ")
 		for !kennitala.ValidateKT(strKennitala) {
-			strKennitala = getInput("Invalid kennitala. Please enter a valid kennitala: ")
+			strKennitala = utils.GetInput("Invalid kennitala. Please enter a valid kennitala: ")
 		}
 	}
 
 	// Initialize API client and CSV handler
-	objAPI := apiclient.NewAPIClient(objCfg.Proxy, iTimeOut, iMinQuiet, objLogger)
+	objAPI := apiclient.NewAPIClient(objCfg.Proxy, objCfg.TimeOut, objCfg.MinQuiet, objLogger)
 	objCSV := NewCSVHandler(objCfg.CSVDelim, objLogger)
 
 	// Build headers
@@ -264,17 +279,22 @@ func main() {
 		dictPT := objPT.(map[string]any)
 		fmt.Printf("%d: %v (%v)\n", iIndex, dictPT["title"], dictPT["description"])
 	}
-	strPayType := getInput("Please enter the payment type ID: ")
-	if !isInt(strPayType) {
+	strPayType := utils.GetInput("Please enter the payment type ID: ")
+	iPayType, err := strconv.Atoi(strPayType)
+	if err != nil {
 		objLogger.LogEntry("Payment type ID must be an integer", 0, true)
 	}
-	iPayType := 0
-	fmt.Sscanf(strPayType, "%d", &iPayType)
 	if iPayType < 0 || iPayType >= len(lstPayTypes) {
 		objLogger.LogEntry(fmt.Sprintf("Payment type ID must be between 0 and %d", len(lstPayTypes)-1), 0, true)
 	}
 	strPayTypeID := fmt.Sprintf("%v", lstPayTypes[iPayType].(map[string]any)["id"])
 	objLogger.Log(fmt.Sprintf("Payment type ID %d: %s was selected", iPayType, strPayTypeID))
+
+	objLogger.Log(fmt.Sprintf("Ready to start processing %v", objCfg.Environment))
+	strConfirmation := utils.GetInput("Please enter the environment name to confirm ready to proceed")
+	if strConfirmation != objCfg.Environment {
+		objLogger.LogEntry("Confirmation doesn't match, unable to proceed", 0, true)
+	}
 
 	// Build URL string
 	dictMyParams = make(map[string]string)
@@ -316,8 +336,8 @@ func main() {
 		dictLine := map[string]any{
 			"quantity":              1,
 			"description":           strDescription,
-			"unitPriceIncludingVat": parseFloat(dictRow["Expense Total Amount (in Reimbursement Currency)"]),
-			"vatPercentage":         parseFloat(strTaxPct),
+			"unitPriceIncludingVat": utils.ParseFloat(dictRow["Expense Total Amount (in Reimbursement Currency)"]),
+			"vatPercentage":         utils.ParseFloat(strTaxPct),
 			"accountId":             strAcctID,
 		}
 
@@ -369,8 +389,8 @@ func main() {
 				} else {
 					dictCreditor["ssn"] = strKennitala
 				}
-				fDistance := parseFloat(dictRow["Distance"])
-				fMileage := parseFloat(dictRow["Mileage Rate"])
+				fDistance := utils.ParseFloat(dictRow["Distance"])
+				fMileage := utils.ParseFloat(dictRow["Mileage Rate"])
 				strDescription = fmt.Sprintf("Mileage for %s - %.2f %s @ %.0f kr/km",
 					dictRow["Vehicle Name"], fDistance, dictRow["Mileage Unit"], fMileage)
 				dictBody["comment"] = dictRow["Expense Description"]
@@ -397,43 +417,6 @@ func main() {
 	objLogger.Log(fmt.Sprintf("Done processing file %s", objCfg.InFile))
 }
 
-func chkdir(strDir string) bool {
-	if _, err := os.Stat(strDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(strDir, 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to create directory %s: %s\n", strDir, err)
-			return false
-		}
-	}
-	return true
-}
-
-func getInput(strPrompt string) string {
-	fmt.Print(strPrompt)
-	objScanner := bufio.NewScanner(os.Stdin)
-	objScanner.Scan()
-	return strings.TrimSpace(objScanner.Text())
-}
-
-func isInt(strVal string) bool {
-	if strVal == "" {
-		return false
-	}
-	for _, c := range strVal {
-		if c < '0' || c > '9' {
-			return false
-		}
-	}
-	return true
-}
-
-func parseFloat(strVal string) float64 {
-	fVal, err := strconv.ParseFloat(strings.TrimSpace(strVal), 64)
-	if err != nil {
-		return 0.0
-	}
-	return fVal
-}
-
 func ListAttachments(strDirectory string, strPattern string) []string {
 	var lstFiles []string
 	objEntries, err := os.ReadDir(strDirectory)
@@ -442,18 +425,10 @@ func ListAttachments(strDirectory string, strPattern string) []string {
 	}
 	for _, objEntry := range objEntries {
 		if !objEntry.IsDir() {
-			if matchPattern(objEntry.Name(), strPattern) {
+			if utils.MatchPattern(objEntry.Name(), strPattern) {
 				lstFiles = append(lstFiles, objEntry.Name())
 			}
 		}
 	}
 	return lstFiles
-}
-
-func matchPattern(strName string, strPattern string) bool {
-	if !strings.Contains(strPattern, "*") {
-		return strName == strPattern
-	}
-	strPrefix := strPattern[:strings.Index(strPattern, "*")]
-	return strings.HasPrefix(strName, strPrefix)
 }
