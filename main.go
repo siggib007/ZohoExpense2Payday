@@ -38,16 +38,15 @@ func main() {
 	strEmployee := flag.String("e", "name", "Employee identification for milage expenses: name, kt or kennitala. Default: name")
 	strProxy := flag.String("x", "", "Proxy for API calls")
 	iTimeout := flag.Int("t", objCfg.TimeOut, "Timeout value on API calls, number of seconds")
-	strLogFile := flag.String("l", objPaths.StrDefLogFile, "Path to log file")
 	flag.Parse()
 
 	fmt.Print("This is a script to transfer expense items from Zoho Expense to Payday.\n")
 	fmt.Printf("Running from: %s\n", objPaths.StrExeDir)
 	fmt.Printf("The time now is %s\n", time.Now().Format("Monday 02 January 2006 15:04:05"))
-	fmt.Printf("Logs saved to %s\n", *strLogFile)
+	fmt.Printf("Logs saved to %s\n", objPaths.StrDefLogFile)
 
 	// Initialize logger
-	objLogger, err := logger.NewLogger(*strLogFile, *iVerbose)
+	objLogger, err := logger.NewLogger(objPaths.StrDefLogFile, *iVerbose)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create log file: %s\n", err)
 		os.Exit(1)
@@ -96,20 +95,35 @@ func main() {
 		} else {
 			objLogger.Log("Found few possible configuration files, would any of these work?")
 			for i, strEntry := range lstFiles {
-				objLogger.Log(fmt.Sprintf("   %d: %s\n", i+1, strEntry))
+				objLogger.Log(fmt.Sprintf("   %d: %s", i+1, strEntry))
 			}
-			objLogger.Log(fmt.Sprintf("   %d: Provide manually\n", len(lstFiles)+1))
-			objLogger.Log(fmt.Sprintf("   %d: Abort\n", len(lstFiles)+2))
+			objLogger.Log(fmt.Sprintf("   %d: Provide manually", len(lstFiles)+1))
+			objLogger.Log(fmt.Sprintf("   %d: Abort", len(lstFiles)+2))
 			strResponse := utils.GetInput("Type the number of your choice: ")
 			strInput := strings.TrimSpace(strResponse)
 			iChoice, err := strconv.Atoi(strInput)
 			if err != nil {
-				objLogger.LogEntry(fmt.Sprintf("Invalid selection %v!! Aborting. \n", strResponse), 0, true)
+				objLogger.LogEntry(fmt.Sprintf("Invalid selection %v!! Aborting.", strResponse), 0, true)
 			}
+			objLogger.Log(fmt.Sprintf("You selected %v", iChoice))
+			objLogger.LogEntry(fmt.Sprintf("List len: %v", len(lstFiles)), 3, false)
+
 			if iChoice < 1 || iChoice > len(lstFiles)+2 {
-				objLogger.LogEntry(fmt.Sprintf("selection %v out of range!! Aborting. \n", strResponse), 0, true)
+				objLogger.LogEntry(fmt.Sprintf("selection %v out of range!! Aborting.", strResponse), 0, true)
 			}
-			*strConfFile = filepath.Join(objPaths.StrExeDir, lstFiles[iChoice-1])
+			if iChoice == len(lstFiles)+2 {
+				objLogger.LogEntry("OK Got it, bailing", 0, true)
+			}
+			if iChoice == len(lstFiles)+1 {
+				*strConfFile = utils.GetInput("Please specify full path for your desired config file: ")
+				if *strConfFile == "" || !utils.FileExists(*strConfFile) {
+					objLogger.LogEntry("Can't go on without a valid configuration file", 0, true)
+				}
+			}
+			if iChoice < len(lstFiles)+1 {
+				*strConfFile = filepath.Join(objPaths.StrExeDir, lstFiles[iChoice-1])
+				objLogger.Log(fmt.Sprintf("Conf file is now %v", *strConfFile))
+			}
 			if *strConfFile == "" || !utils.FileExists(*strConfFile) {
 				objLogger.LogEntry("Can't go on without a valid configuration file", 0, true)
 			}
@@ -314,7 +328,7 @@ func main() {
 	objLogger.Log(fmt.Sprintf("Payment type ID %d: %s was selected", iPayType, strPayTypeID))
 
 	if objCfg.Environment != "" {
-		objLogger.Log(fmt.Sprintf("Ready to start processing %v\n", objCfg.Environment))
+		objLogger.Log(fmt.Sprintf("Ready to start processing %v", objCfg.Environment))
 		strConfirmation := utils.GetInput("Please enter the environment name to confirm ready to proceed: ")
 		if strConfirmation != objCfg.Environment {
 			objLogger.LogEntry("Confirmation doesn't match, unable to proceed", 0, true)
@@ -375,8 +389,8 @@ func main() {
 			}
 
 			strEntryID = dictRow["Entry Number"]
-			objLogger.Log(fmt.Sprintf("Working on: %s - Entry %s - Vendor: %s",
-				dictRow["Expense Description"], strEntryID, dictRow["Merchant Name"]))
+			objLogger.Log(fmt.Sprintf("Working on: %s - Entry %s - Milage type: %v - Vendor: %s",
+				dictRow["Expense Description"], strEntryID, dictRow["Mileage Type"], dictRow["Merchant Name"]))
 
 			// Gather attachments
 			lstFiles = make(map[string]string)
