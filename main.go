@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -64,12 +65,54 @@ func main() {
 	objLogger.Log(fmt.Sprintf("Verbosity set to %d", *iVerbose))
 	objLogger.Log(fmt.Sprintf("Config file set to: %s", *strConfFile))
 
+	bFail := false
 	bIsDir, _, err := utils.CheckPath(*strConfFile)
 	if err != nil {
-		objLogger.LogEntry(fmt.Sprintf("Invalid config path: %v", err), 0, true)
+		objLogger.LogEntry(fmt.Sprintf("Invalid config path: %v", err), 0, false)
+		bFail = true
 	}
 	if bIsDir {
-		objLogger.LogEntry("Config path, is just a directory not a file:", 0, true)
+		objLogger.LogEntry("Config path, is just a directory not a file:", 0, false)
+		bFail = true
+	}
+	if bFail {
+		lstFiles := utils.ListFiles(objPaths.StrExeDir, ".ini")
+		if len(lstFiles) == 0 {
+			objLogger.Log("Failed to find any configuration files in the execution directory")
+			*strConfFile = utils.GetInput("Please provide a full path to the desired configuration file: ")
+			if *strConfFile == "" || !utils.FileExists(*strConfFile) {
+				objLogger.LogEntry("Can't go on without a valid configuration file", 0, true)
+			}
+		} else if len(lstFiles) == 1 {
+			objLogger.Log(fmt.Sprintf("Found a possible configuration files, do you want %v ?", lstFiles[0]))
+			strResponse := utils.GetInput("Type yes to accept, or provide a full path to the desired configuration file: ")
+			if strResponse == "yes" {
+				*strConfFile = filepath.Join(objPaths.StrExeDir, lstFiles[0])
+			}
+			if *strConfFile == "" || !utils.FileExists(*strConfFile) {
+				objLogger.LogEntry("Can't go on without a valid configuration file", 0, true)
+			}
+		} else {
+			objLogger.Log("Found few possible configuration files, would any of these work?")
+			for i, strEntry := range lstFiles {
+				objLogger.Log(fmt.Sprintf("   %d: %s\n", i+1, strEntry))
+			}
+			objLogger.Log(fmt.Sprintf("   %d: Provide manually\n", len(lstFiles)+1))
+			objLogger.Log(fmt.Sprintf("   %d: Abort\n", len(lstFiles)+2))
+			strResponse := utils.GetInput("Type the number of your choice: ")
+			strInput := strings.TrimSpace(strResponse)
+			iChoice, err := strconv.Atoi(strInput)
+			if err != nil {
+				objLogger.LogEntry(fmt.Sprintf("Invalid selection %v!! Aborting. \n", strResponse), 0, true)
+			}
+			if iChoice < 1 || iChoice > len(lstFiles)+2 {
+				objLogger.LogEntry(fmt.Sprintf("selection %v out of range!! Aborting. \n", strResponse), 0, true)
+			}
+			*strConfFile = filepath.Join(objPaths.StrExeDir, lstFiles[iChoice-1])
+			if *strConfFile == "" || !utils.FileExists(*strConfFile) {
+				objLogger.LogEntry("Can't go on without a valid configuration file", 0, true)
+			}
+		}
 	}
 
 	objCfg.Verbose = *iVerbose
