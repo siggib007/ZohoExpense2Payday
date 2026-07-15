@@ -185,9 +185,6 @@ func main() {
 	if objCfg.BaseURL == "" || objCfg.ClientID == "" || objCfg.ClientSecret == "" {
 		objLogger.LogEntry("No URL or API auth config, exiting", 0, true)
 	}
-	if !strings.HasSuffix(objCfg.BaseURL, "/") {
-		objCfg.BaseURL += "/"
-	}
 
 	// Validate employee ID type
 	strEmpLower := strings.ToLower(objCfg.EmployeeID)
