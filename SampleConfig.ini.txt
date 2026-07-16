@@ -1,0 +1,15 @@
+# This is a sample configuration file for Zoho Expense Script. Remove the txt extension and have just .ini
+# Created 16 July 2026 by Siggi Bjarnason
+
+#Various config items, overwritten by cmd parameters
+
+Environment=dev # or production or whatever. Used in confirmation prompt
+API_URL=[Your Payday API URL]
+CLIENT_ID=[Your Payday API Client ID]
+CLIENT_SECRET=[Your Payday API Client Secret]
+TimeOut=10 #Optional will use default if missing
+MinQuiet=2 #Optional will use default if missing
+ATTACHMENTS=C:\PDZohoExp\ER-00027.zip #Optional will prompt if missing
+IN_FILE=C:\PDZohoExp\Expense_Report-bad.csv #Optional will prompt if missing
+EMPLOYEE_ID=name # name | kt - Employee name in Zoho Expense Report, or prompt for kennitala. Optional, uses name as default
+#PROXY=127.0.0.1:8080 # Proxy for API calls, if needed
