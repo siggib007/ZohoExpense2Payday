@@ -296,6 +296,7 @@ func main() {
 	dictMyParams = make(map[string]string)
 	strURL = apiclient.BuildURL(objCfg.BaseURL, "expenses", dictMyParams)
 	objCallOptions.URL = strURL
+	objCallOptions.Method = "POST"
 
 	// Process expense entries
 	strEntryID := ""
