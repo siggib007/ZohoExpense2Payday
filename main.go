@@ -305,6 +305,8 @@ func main() {
 	var lstBadEntryIDs []string
 
 	submitEntry := func() {
+		objCallOptions.Payload = dictBody
+		objCallOptions.Files = lstFiles
 		objResp := objAPI.MakeAPICall(objCallOptions)
 		objLogger.LogEntry(fmt.Sprintf("APIResp success: %v", objResp.Success), 5, false)
 		if !objResp.Success {
