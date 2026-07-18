@@ -22,7 +22,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "cannot determine base paths: "+err.Error())
 		os.Exit(3)
 	}
-	strScriptName := objPaths.StrScriptName
+	strScriptName := objPaths.AppName
 
 	// Load config — three tier: INI -> env vars -> CLI flags
 	objCfg := defaultConfig()
@@ -33,7 +33,7 @@ func main() {
 	strAttachments := flag.String("a", "", "Path to attachments directory or attachment zip file")
 	bDeductible := flag.Bool("d", objCfg.Deductible, "Is VAT deductible? True/False. Default: True")
 	iVerbose := flag.Int("v", 1, "Verbosity level (1-5)")
-	strConfFile := flag.String("c", objPaths.StrDefConf, "Path to configuration file, defaults to file with same name as the application in the application directory.")
+	strConfFile := flag.String("c", objPaths.DefConf, "Path to configuration file, defaults to file with same name as the application in the application directory.")
 	strBaseURL := flag.String("u", "", "Base URL for API calls")
 	strEmployee := flag.String("id", "name", "Employee identification for milage expenses: name, kt or kennitala. Default: name")
 	bUseEnv := flag.Bool("e", false, "Indicates not to try to load config file, only use environment variables")
@@ -42,12 +42,12 @@ func main() {
 	flag.Parse()
 
 	fmt.Print("This is a script to transfer expense items from Zoho Expense to Payday.\n")
-	fmt.Printf("Running from: %s\n", objPaths.StrExeDir)
+	fmt.Printf("Running from: %s\n", objPaths.ExeDir)
 	fmt.Printf("The time now is %s\n", time.Now().Format("Monday 02 January 2006 15:04:05"))
-	fmt.Printf("Logs saved to %s\n", objPaths.StrDefLogFile)
+	fmt.Printf("Logs saved to %s\n", objPaths.DefLogFile)
 
 	// Initialize logger
-	objLogger, err := logger.NewLogger(objPaths.StrDefLogFile, *iVerbose)
+	objLogger, err := logger.NewLogger(objPaths.DefLogFile, *iVerbose)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create log file: %s\n", err)
 		os.Exit(1)
@@ -77,8 +77,8 @@ func main() {
 			bFail = true
 		}
 		if bFail {
-			objLogger.Log(fmt.Sprintf("Searching for a viable config file in %v", objPaths.StrExeDir))
-			lstFiles := utils.FindFilesExt(objPaths.StrExeDir, ".ini")
+			objLogger.Log(fmt.Sprintf("Searching for a viable config file in %v", objPaths.ExeDir))
+			lstFiles := utils.FindFilesExt(objPaths.ExeDir, ".ini")
 			if len(lstFiles) == 0 {
 				objLogger.Log("Failed to find any configuration files in the execution directory")
 				*strConfFile = utils.GetInput("Please provide a full path to the desired configuration file, or specify env to use environment variables instead: ")
@@ -89,7 +89,7 @@ func main() {
 				objLogger.Log(fmt.Sprintf("Found a possible configuration files, do you want %v ?", lstFiles[0]))
 				strResponse := utils.GetInput("Type yes to accept, or provide a full path to the desired configuration file, or specify env to use environment variables instead: ")
 				if strResponse == "yes" {
-					*strConfFile = filepath.Join(objPaths.StrExeDir, lstFiles[0])
+					*strConfFile = filepath.Join(objPaths.ExeDir, lstFiles[0])
 				} else {
 					*strConfFile = strResponse
 				}
@@ -129,7 +129,7 @@ func main() {
 					}
 				}
 				if iChoice < len(lstFiles)+1 {
-					*strConfFile = filepath.Join(objPaths.StrExeDir, lstFiles[iChoice-1])
+					*strConfFile = filepath.Join(objPaths.ExeDir, lstFiles[iChoice-1])
 					objLogger.Log(fmt.Sprintf("Conf file is now %v", *strConfFile))
 				}
 				if *strConfFile != "env" && (*strConfFile == "" || !utils.FileExists(*strConfFile)) {
@@ -240,6 +240,7 @@ func main() {
 	objCSV := NewCSVHandler(objCfg.CSVDelim, objLogger)
 
 	// Build headers
+
 	dictHeader := map[string]string{
 		"Api-Version": "alpha",
 		"Application": strScriptName,
@@ -256,14 +257,20 @@ func main() {
 	dictMyParams := make(map[string]string)
 	strURL := apiclient.BuildURL(objCfg.BaseURL, "auth/token", dictMyParams)
 
+	objCallOptions := apiclient.APICallOptions{}
+	objCallOptions.URL = strURL
+	objCallOptions.Header = dictHeader
+	objCallOptions.Method = "POST"
+	objCallOptions.Payload = dictAuthBody
+
 	objLogger.Log("Requesting access token")
-	objResp := objAPI.MakeAPICall(strURL, dictHeader, "post", dictAuthBody, nil, "", "")
-	if !objResp.BSuccess {
-		objLogger.LogEntry(fmt.Sprintf("Failed to get access token: %s", objResp.StrError), 0, true)
+	objResp := objAPI.MakeAPICall(objCallOptions)
+	if !objResp.Success {
+		objLogger.LogEntry(fmt.Sprintf("Failed to get access token: %s", objResp.Error), 0, true)
 	}
 
 	// Extract access token
-	dictAuthResp, ok := objResp.ObjData.(map[string]any)
+	dictAuthResp, ok := objResp.Data.(map[string]any)
 	if !ok {
 		objLogger.LogEntry("Unexpected auth response format", 0, true)
 	}
@@ -273,17 +280,19 @@ func main() {
 	}
 	objLogger.Log("Successfully obtained access token")
 	dictHeader["Authorization"] = "Bearer " + strAccessToken
+	objCallOptions.Header = dictHeader
 
 	// Build URL string
 	dictMyParams = make(map[string]string)
 	strURL = apiclient.BuildURL(objCfg.BaseURL, "accounting/accounts", dictMyParams)
+	objCallOptions.URL = strURL
 
 	// Fetch accounts
-	objResp = objAPI.MakeAPICall(strURL, dictHeader, "get", nil, nil, "", "")
-	if !objResp.BSuccess {
-		objLogger.LogEntry(fmt.Sprintf("Failed to fetch accounts: %s", objResp.StrError), 0, true)
+	objResp = objAPI.MakeAPICall(objCallOptions)
+	if !objResp.Success {
+		objLogger.LogEntry(fmt.Sprintf("Failed to fetch accounts: %s", objResp.Error), 0, true)
 	}
-	lstAccounts, ok := objResp.ObjData.([]any)
+	lstAccounts, ok := objResp.Data.([]any)
 	if !ok {
 		objLogger.LogEntry("Unexpected accounts response format", 0, true)
 	}
@@ -319,13 +328,14 @@ func main() {
 	// Build URL string
 	dictMyParams = make(map[string]string)
 	strURL = apiclient.BuildURL(objCfg.BaseURL, "expenses/paymenttypes", dictMyParams)
+	objCallOptions.URL = strURL
 
 	// Fetch payment types
-	objResp = objAPI.MakeAPICall(strURL, dictHeader, "get", nil, nil, "", "")
-	if !objResp.BSuccess {
-		objLogger.LogEntry(fmt.Sprintf("Failed to fetch payment types: %s", objResp.StrError), 0, true)
+	objResp = objAPI.MakeAPICall(objCallOptions)
+	if !objResp.Success {
+		objLogger.LogEntry(fmt.Sprintf("Failed to fetch payment types: %s", objResp.Error), 0, true)
 	}
-	lstPayTypes, ok := objResp.ObjData.([]any)
+	lstPayTypes, ok := objResp.Data.([]any)
 	if !ok {
 		objLogger.LogEntry("Unexpected payment types response format", 0, true)
 	}
@@ -359,6 +369,7 @@ func main() {
 	// Build URL string
 	dictMyParams = make(map[string]string)
 	strURL = apiclient.BuildURL(objCfg.BaseURL, "expenses", dictMyParams)
+	objCallOptions.URL = strURL
 
 	// Process expense entries
 	strEntryID := ""
@@ -367,10 +378,10 @@ func main() {
 	var lstBadEntryIDs []string
 
 	submitEntry := func() {
-		objResp := objAPI.MakeAPICall(strURL, dictHeader, "post", dictBody, lstFiles, "", "")
-		objLogger.LogEntry(fmt.Sprintf("APIResp success: %v", objResp.BSuccess), 5, false)
-		if !objResp.BSuccess {
-			objLogger.Log(fmt.Sprintf("Failed entry %s: %s", strEntryID, objResp.StrError))
+		objResp := objAPI.MakeAPICall(objCallOptions)
+		objLogger.LogEntry(fmt.Sprintf("APIResp success: %v", objResp.Success), 5, false)
+		if !objResp.Success {
+			objLogger.Log(fmt.Sprintf("Failed entry %s: %s", strEntryID, objResp.Error))
 			lstBadEntryIDs = append(lstBadEntryIDs, strEntryID)
 		} else {
 			objLogger.Log(fmt.Sprintf("Successfully submitted entry %s", strEntryID))
